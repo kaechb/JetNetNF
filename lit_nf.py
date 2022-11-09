@@ -99,8 +99,7 @@ class LitNF(pl.LightningModule):
                     use_batch_norm=self.config["batchnorm"],
                     activation=FF.relu)]
             
-            elif self.config["spline"]:
-                    
+            elif self.config["spline"]:   
                     self.flows += [PiecewiseRationalQuadraticCouplingTransform(
                         mask=mask,
                         transform_net_create_fn=self.create_resnet, 
@@ -140,7 +139,6 @@ class LitNF(pl.LightningModule):
                 "input_features": 3,
                 "output_classes": self.config["context_features"]}
                 self.particle_net=ParticleNet(settings)
-                
                 return 0
 
 
@@ -186,8 +184,7 @@ class LitNF(pl.LightningModule):
             .reshape(-1,self.n_dim),torch.ones(len(gen)).to(self.device).unsqueeze(1))))
         true=self.data_module.scaler.inverse_transform(batch[:,:self.n_dim+1].to(self.device)).to(self.device)
         m=true[:,self.n_dim]
-        m_g=mass(gen[:,:self.n_dim].to(self.device) ,
-                 self.config["canonical"]).to(self.device)
+        m_g=mass(gen[:,:self.n_dim].to(self.device) ,self.config["canonical"]).to(self.device)
         gen=torch.column_stack((gen,m_g))
         return gen,true,m,m_g
         
@@ -212,7 +209,6 @@ class LitNF(pl.LightningModule):
      
     def _summary(self,temp):
             first=False
-            
             self.summary_path="/beegfs/desy/user/{}/{}/summary.csv".format(os.environ["USER"],self.config["name"])
             if self.global_step==0:
                 self.start=time.time()
@@ -222,8 +218,7 @@ class LitNF(pl.LightningModule):
             else:
                 print("summary not found")
                 summary=pd.DataFrame()
-                first=True
-                
+                first=True            
             summary.loc[self.logger.log_dir,self.config.keys()]=self.config.values()
             summary.loc[self.logger.log_dir,temp.keys()]=temp.values()
             summary.loc[self.logger.log_dir,"time"]=time.time()-self.start      
