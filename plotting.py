@@ -191,27 +191,6 @@ class plotting():
             else:
                 plt.show()
 
-    def losses(self,save=False):
-        '''This plots the different losses vs epochs'''
-        fig=plt.figure()
-        hep.cms.label("Private Work",data=None,lumi=None,year=None)
-        plt.xlabel('step')
-        plt.ylabel('loss')
-        ln1=plt.plot(self.model.logprobs,label='logprob')
-        if "calc_massloss" in self.config.keys() and self.config["calc_massloss"]:
-            plt.twinx()
-            ln2=plt.plot(self.model.mlosses,label=r'mass mse $\times$ {}'.format(self.config["lambda"]),color='orange')
-            plt.ylabel("MSE")
-            plt.yscale("log")
-            ln1+=ln2
-        labs=[l.get_label() for l in ln1]
-        plt.legend(ln1,labs)
-        plt.tight_layout(pad=2)
-        if save:
-            self.summary.add_figure("losses",fig,self.step)
-#             self.summary.close()
-        else:
-            plt.show()
     def plot_scores(self,scores_T,scores_gen,save=False):
         '''This plots the score distribution of the discriminator evaluated on true (simulated) sample scores_T 
         and on generated samples scores_gen'''

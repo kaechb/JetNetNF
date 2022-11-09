@@ -4,36 +4,30 @@ import os
 import nflows as nf
 from nflows.utils.torchutils import create_random_binary_mask
 from nflows.transforms.base import CompositeTransform
-from nflows.transforms.coupling import *
 from nflows.nn import nets
 from nflows.flows.base import Flow
 from nflows.flows import base
-from nflows.transforms.coupling import *
-from nflows.transforms.autoregressive import *
-from particle_net import ParticleNet
+from nflows.transforms.coupling import PiecewiseRationalQuadraticCouplingTransform
+from nflows.transforms.autoregressive import MaskedPiecewiseRationalQuadraticAutoregressiveTransform
 import pytorch_lightning as pl
 from torch.optim.lr_scheduler import OneCycleLR,ReduceLROnPlateau,ExponentialLR
 import torch
 from torch import nn
 from torch.nn import functional as FF
-import numpy as np
 from jetnet.evaluation import w1p, w1efp, w1m, cov_mmd,fpnd
 import mplhep as hep
 import hist
 from hist import Hist
 from pytorch_lightning.loggers import TensorBoardLogger
 from collections import OrderedDict
-from ray import tune
-from helpers import *
-from plotting import *
+from helpers import mass
+from plotting import plotting
 import pandas as pd
 import os
-
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-import pandas as pd
 import time
 class LitNF(pl.LightningModule):
     
@@ -56,7 +50,6 @@ class LitNF(pl.LightningModule):
                 activation=self.config["activation"]  if "activation" in self.config.keys() else FF.relu,
                 dropout_probability=self.config["dropout"] if "dropout" in self.config.keys() else 0,
                 use_batch_norm=self.config["batchnorm"] if "batchnorm" in self.config.keys() else 0,
-
                     )
     def __init__(self,config,hyperopt):
         
@@ -81,9 +74,6 @@ class LitNF(pl.LightningModule):
             '''This creates the masks for the coupling layers, particle masks are masks
             created such that each feature particle (eta,phi,pt) is masked together or not'''
             mask=create_random_binary_mask(self.n_dim)  
-            if "particle_masks" in self.config.keys() and self.config["particle_masks"] :
-                mask=create_random_binary_mask(self.n_dim//3)            
-                mask=mask.repeat_interleave(3)
             #Here are the coupling layers of the flow. There seem to be 3 choices but actually its more or less only 2
             #The autoregressive one is incredibly slow while sampling which does not work together with the constraint
             if self.config["spline"]=="autoreg":
@@ -120,29 +110,6 @@ class LitNF(pl.LightningModule):
         # Construct flow model
         self.flow_test= base.Flow(distribution=self.q_test, transform=self.flows)
         self.flow = base.Flow(distribution=self.q0, transform=self.flows)
-        
-    def build_disc(self,config=None):
-        '''this builds a discriminator that can be used to distinguish generated from real
-        data, optimally we would want it to have a 50% accuracy, meaning it can distinguish
-        This is just a Feed Forward Neural Network
-        The wgan keyword makes it a Wasserstein type of discriminator/critic
-        I played around with this but it did not work particularly well'''
-        if config:
-                settings = {
-                "conv_params": [
-                    (8, (64, 64, 64)),
-                    (8, (128, 128, 128)),
-                    (8, (128, 128, 128)),
-                ],
-                "fc_params": [
-                    (0.0, 128)
-                ],
-                "input_features": 3,
-                "output_classes": self.config["context_features"]}
-                self.particle_net=ParticleNet(settings)
-                
-                return 0
-
 
     def load_datamodule(self,data_module):
         '''needed for lightning training to work, it just sets the dataloader for training and validation'''
